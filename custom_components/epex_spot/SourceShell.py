@@ -136,7 +136,7 @@ class SourceShell:
         net_p += surcharge_abs
         net_p *= 1 + (tax / 100)
 
-        return net_p
+        return net_p / 100
 
     def find_extreme_price_interval(self, call_data, cmp):
         duration: timedelta = call_data[CONF_DURATION]
