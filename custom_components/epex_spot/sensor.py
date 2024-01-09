@@ -1,6 +1,7 @@
 import logging
 from statistics import median
 
+import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
@@ -74,8 +75,8 @@ class EpexSpotPriceSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         data = [
             {
-                ATTR_START_TIME: e.start_time.isoformat(),
-                ATTR_END_TIME: e.end_time.isoformat(),
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
                 self._localized.attr_name_per_mwh: e.price_eur_per_mwh,
                 self._localized.attr_name_per_kwh: to_ct_per_kwh(e.price_eur_per_mwh),
             }
@@ -111,8 +112,8 @@ class EpexSpotNetPriceSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         data = [
             {
-                ATTR_START_TIME: e.start_time.isoformat(),
-                ATTR_END_TIME: e.end_time.isoformat(),
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
                 self._localized.attr_name_per_kwh: self._source.to_net_price(
                     e.price_eur_per_mwh
                 ),
@@ -131,6 +132,7 @@ class EpexSpotBuyVolumeSensorEntity(EpexSpotEntity, SensorEntity):
         name="Buy Volume",
         icon="mdi:lightning-bolt",
         native_unit_of_measurement="MWh",
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -144,16 +146,14 @@ class EpexSpotBuyVolumeSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         data = [
             {
-                ATTR_START_TIME: e.start_time.isoformat(),
-                ATTR_END_TIME: e.end_time.isoformat(),
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
                 "buy_volume_mwh": e.buy_volume_mwh,
             }
             for e in self._source.marketdata
         ]
 
-        self._attr_extra_state_attributes = {
-            ATTR_DATA: data,
-        }
+        return {ATTR_DATA: data}
 
 
 class EpexSpotSellVolumeSensorEntity(EpexSpotEntity, SensorEntity):
@@ -164,6 +164,7 @@ class EpexSpotSellVolumeSensorEntity(EpexSpotEntity, SensorEntity):
         name="Sell Volume",
         icon="mdi:lightning-bolt",
         native_unit_of_measurement="MWh",
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -177,16 +178,14 @@ class EpexSpotSellVolumeSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         data = [
             {
-                ATTR_START_TIME: e.start_time.isoformat(),
-                ATTR_END_TIME: e.end_time.isoformat(),
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
                 "sell_volume_mwh": e.sell_volume_mwh,
             }
             for e in self._source.marketdata
         ]
 
-        self._attr_extra_state_attributes = {
-            ATTR_DATA: data,
-        }
+        return {ATTR_DATA: data}
 
 
 class EpexSpotVolumeSensorEntity(EpexSpotEntity, SensorEntity):
@@ -197,6 +196,7 @@ class EpexSpotVolumeSensorEntity(EpexSpotEntity, SensorEntity):
         name="Volume",
         icon="mdi:lightning-bolt",
         native_unit_of_measurement="MWh",
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -210,23 +210,25 @@ class EpexSpotVolumeSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         data = [
             {
-                ATTR_START_TIME: e.start_time.isoformat(),
-                ATTR_END_TIME: e.end_time.isoformat(),
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
                 "volume_mwh": e.volume_mwh,
             }
             for e in self._source.marketdata
         ]
 
-        self._attr_extra_state_attributes = {
-            ATTR_DATA: data,
-        }
+        return {ATTR_DATA: data}
 
 
 class EpexSpotRankSensorEntity(EpexSpotEntity, SensorEntity):
     """Home Assistant sensor containing all EPEX spot data."""
 
     entity_description = SensorEntityDescription(
-        key="Rank", name="Rank", native_unit_of_measurement=""
+        key="Rank",
+        name="Rank",
+        native_unit_of_measurement="",
+        suggested_display_precision=0,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -238,6 +240,22 @@ class EpexSpotRankSensorEntity(EpexSpotEntity, SensorEntity):
             e.price_eur_per_mwh for e in self._source.sorted_marketdata_today
         ].index(self._source.marketdata_now.price_eur_per_mwh)
 
+    @property
+    def extra_state_attributes(self):
+        sorted_prices = [
+            e.price_eur_per_mwh for e in self._source.sorted_marketdata_today
+        ]
+        data = [
+            {
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
+                "rank": sorted_prices.index(e.price_eur_per_mwh),
+            }
+            for e in self._source.sorted_marketdata_today
+        ]
+
+        return {ATTR_DATA: data}
+
 
 class EpexSpotQuantileSensorEntity(EpexSpotEntity, SensorEntity):
     """Home Assistant sensor containing all EPEX spot data."""
@@ -245,8 +263,9 @@ class EpexSpotQuantileSensorEntity(EpexSpotEntity, SensorEntity):
     entity_description = SensorEntityDescription(
         key="Quantile",
         name="Quantile",
-        suggested_display_precision=2,
         native_unit_of_measurement="",
+        suggested_display_precision=2,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -259,6 +278,21 @@ class EpexSpotQuantileSensorEntity(EpexSpotEntity, SensorEntity):
         max_price = self._source.sorted_marketdata_today[-1].price_eur_per_mwh
         return (current_price - min_price) / (max_price - min_price)
 
+    @property
+    def extra_state_attributes(self):
+        min_price = self._source.sorted_marketdata_today[0].price_eur_per_mwh
+        max_price = self._source.sorted_marketdata_today[-1].price_eur_per_mwh
+        data = [
+            {
+                ATTR_START_TIME: dt_util.as_local(e.start_time).isoformat(),
+                ATTR_END_TIME: dt_util.as_local(e.end_time).isoformat(),
+                "quantile": (e.price_eur_per_mwh - min_price) / (max_price - min_price),
+            }
+            for e in self._source.sorted_marketdata_today
+        ]
+
+        return {ATTR_DATA: data}
+
 
 class EpexSpotLowestPriceSensorEntity(EpexSpotEntity, SensorEntity):
     """Home Assistant sensor containing all EPEX spot data."""
@@ -266,6 +300,8 @@ class EpexSpotLowestPriceSensorEntity(EpexSpotEntity, SensorEntity):
     entity_description = SensorEntityDescription(
         key="Lowest Price",
         name="Lowest Price",
+        suggested_display_precision=2,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -282,8 +318,8 @@ class EpexSpotLowestPriceSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         min = self._source.sorted_marketdata_today[0]
         return {
-            ATTR_START_TIME: min.start_time.isoformat(),
-            ATTR_END_TIME: min.end_time.isoformat(),
+            ATTR_START_TIME: dt_util.as_local(min.start_time).isoformat(),
+            ATTR_END_TIME: dt_util.as_local(min.end_time).isoformat(),
             self._localized.attr_name_per_kwh: to_ct_per_kwh(self.native_value),
         }
 
@@ -294,6 +330,8 @@ class EpexSpotHighestPriceSensorEntity(EpexSpotEntity, SensorEntity):
     entity_description = SensorEntityDescription(
         key="Highest Price",
         name="Highest Price",
+        suggested_display_precision=2,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -310,8 +348,8 @@ class EpexSpotHighestPriceSensorEntity(EpexSpotEntity, SensorEntity):
     def extra_state_attributes(self):
         max = self._source.sorted_marketdata_today[-1]
         return {
-            ATTR_START_TIME: max.start_time.isoformat(),
-            ATTR_END_TIME: max.end_time.isoformat(),
+            ATTR_START_TIME: dt_util.as_local(max.start_time).isoformat(),
+            ATTR_END_TIME: dt_util.as_local(max.end_time).isoformat(),
             self._localized.attr_name_per_kwh: to_ct_per_kwh(self.native_value),
         }
 
@@ -323,6 +361,7 @@ class EpexSpotAveragePriceSensorEntity(EpexSpotEntity, SensorEntity):
         key="Average Price",
         name="Average Price",
         suggested_display_precision=2,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):
@@ -349,6 +388,7 @@ class EpexSpotMedianPriceSensorEntity(EpexSpotEntity, SensorEntity):
         key="Median Price",
         name="Median Price",
         suggested_display_precision=2,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, coordinator: DataUpdateCoordinator):

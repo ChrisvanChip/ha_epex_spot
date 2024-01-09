@@ -4,6 +4,16 @@
 
 This component adds electricity prices from stock exchange [EPEX Spot](https://www.epexspot.com) to Home Assistant. [EPEX Spot](https://www.epexspot.com) does not provide free access to the data, so this component uses different ways to retrieve the data.
 
+---
+
+January 2024: Hi there, I'm eperimenting with a new feature:
+
+https://github.com/mampfes/ha_epex_spot_sensor
+
+Please let me know if this is a useful addition to EPEX Spit.
+
+---
+
 You can choose between multiple sources:
 
 1. Awattar
@@ -18,7 +28,11 @@ You can choose between multiple sources:
 
    [SMARD.de](https://www.smard.de) provides a free of charge API to retrieve a lot of information about electricity market including market prices. SMARD.de is serviced by the Bundesnetzagentur, Germany.
 
-If you like this component, please give it a star on [github](https://github.com/mampfes/hacs_epex_spot_awattar).
+4. smartENERGY.at
+
+   [smartENERGY.at](https://www.smartenergy.at/api-schnittstellen) provides a free of charge service for their customers. Market price data is available for Austria. So far no user identifiation is required.
+
+If you like this component, please give it a star on [github](https://github.com/mampfes/hacs_epex_spot).
 
 ## Installation
 
@@ -490,8 +504,6 @@ experimental:
   color_threshold: true
 yaxis:
   - id: uurprijs
-    min: 0.1
-    max: 0.5
     decimals: 2
     apex_config:
       title:
