@@ -1,7 +1,7 @@
 {
   "domain": "epex_spot",
-  "name": "EPEX Spot",
-  "codeowners": ["@mampfes"],
+  "name": "EPEX Spot Fork",
+  "codeowners": ["@chrisvanchip"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/mampfes/ha_epex_spot",
