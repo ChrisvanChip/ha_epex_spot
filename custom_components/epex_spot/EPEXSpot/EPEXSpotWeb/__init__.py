@@ -93,11 +93,10 @@ class EPEXSpotWeb:
     )
 
     def __init__(self, market_area, session: aiohttp.ClientSession = None):
-        if session is None:
-            # Create a TCPConnector with SSL verification disabled
-            connector = aiohttp.TCPConnector(ssl=False)
-            # Use the connector to create the session
-            session = aiohttp.ClientSession(connector=connector)
+        # Create a TCPConnector with SSL verification disabled
+        connector = aiohttp.TCPConnector(ssl=False)
+        # Use the connector to create the session
+        session = aiohttp.ClientSession(connector=connector)
         
         self._session = session
 
