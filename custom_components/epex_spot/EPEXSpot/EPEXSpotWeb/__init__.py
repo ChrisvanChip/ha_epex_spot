@@ -16,7 +16,11 @@ def _as_date(v):
     return v.strftime("%Y-%m-%d")
 
 
-MARKET_AREA_MAP = {"GB-30": {"market_area": "GB", "duration": 30}}
+MARKET_AREA_MAP = {
+    "GB-30": {"auction": "30-call-GB", "market_area": "GB", "duration": 30},
+    "GB": {"auction": "GB", "market_area": "GB", "duration": 60},
+    "CH": {"auction": "CH", "market_area": "CH", "duration": 60},
+}
 
 
 class Marketprice:
@@ -50,7 +54,7 @@ class Marketprice:
 
     @property
     def price_ct_per_kwh(self):
-        return self._price_eur_per_mwh / 10
+        return round(self._price_eur_per_mwh / 10, 3)
 
     @property
     def buy_volume_mwh(self):
@@ -105,9 +109,11 @@ class EPEXSpotWeb:
         if item is None:
             self._int_market_area = market_area
             self._duration = 60
+            self._auction = "MRC"
         else:
             self._int_market_area = item["market_area"]
             self._duration = item["duration"]
+            self._auction = item["auction"]
 
         self._marketdata = []
 
@@ -135,9 +141,11 @@ class EPEXSpotWeb:
         delivery_date = datetime.now(ZoneInfo("Europe/Berlin"))
         # get data for remaining day and upcoming day
         # Data for the upcoming day is typically available at 12:45
-        self._marketdata = await self._fetch_day(delivery_date) + await self._fetch_day(
+        marketdata = await self._fetch_day(delivery_date) + await self._fetch_day(
             delivery_date + timedelta(days=1)
         )
+        # overwrite cached marketdata only on success
+        self._marketdata = marketdata
 
     async def _fetch_day(self, delivery_date):
         data = await self._fetch_data(delivery_date)
@@ -153,10 +161,14 @@ class EPEXSpotWeb:
 
     async def _fetch_data(self, delivery_date):
         trading_date = delivery_date - timedelta(days=1)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0"  # noqa
+        }
         params = {
             "market_area": self._int_market_area,
             "trading_date": _as_date(trading_date),
             "delivery_date": _as_date(delivery_date),
+            "auction": self._auction,
             #          "underlying_year": None,
             "modality": "Auction",
             "sub_modality": "DayAhead",
@@ -189,7 +201,9 @@ class EPEXSpotWeb:
             #          "ajax_page_state[libraries]": "bootstrap/popover,bootstrap/tooltip,core/html5shiv,core/jquery.form,epex/global-scripts,epex/global-styling,epex/highcharts,epex_core/data-disclaimer,epex_market_data/filters,epex_market_data/tables,eu_cookie_compliance/eu_cookie_compliance_default,statistics/drupal.statistics,system/base",  # noqa: E501
         }
 
-        async with self._session.post(self.URL, params=params, data=data) as resp:
+        async with self._session.post(
+            self.URL, headers=headers, params=params, data=data, verify_ssl=False
+        ) as resp:
             resp.raise_for_status()
             return await resp.json()
 
