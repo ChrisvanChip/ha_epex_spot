@@ -1,6 +1,8 @@
 """Component for EPEX Spot support."""
 import logging
 from typing import Callable, Any
+import asyncio
+import random
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -27,6 +29,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .const import (
+    ATTR_DATA,
     CONF_DURATION,
     CONF_EARLIEST_START_TIME,
     CONF_EARLIEST_START_POST,
@@ -104,7 +107,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     entry.async_on_unload(
-        async_track_time_change(hass, source.fetch, hour=None, minute=58, second=0)
+        async_track_time_change(
+            hass, coordinator.fetch_source, hour=None, minute=50, second=0
+        )
     )
 
     # service call handling
@@ -200,6 +205,7 @@ class EpexSpotDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> None:
         """Initialize."""
         self.source = source
+        self._error_count = 0
 
         super().__init__(hass, _LOGGER, name=DOMAIN)
 
@@ -210,6 +216,17 @@ class EpexSpotDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def on_refresh(self, *args: Any):
         await self.async_refresh()
 
+    async def fetch_source(self, *args: Any):
+        # spread fetch over 9 minutes to reduce peak load on servers
+        await asyncio.sleep(random.uniform(0, 9 * 60))
+        try:
+            await self.source.fetch()
+            self._error_count = 0
+        except Exception:  # pylint: disable=broad-except
+            self._error_count += 1
+            if self._error_count >= 3:
+                raise
+
 
 class EpexSpotEntity(CoordinatorEntity, Entity):
     """A entity implementation for EPEX Spot service."""
@@ -217,6 +234,7 @@ class EpexSpotEntity(CoordinatorEntity, Entity):
     _coordinator: EpexSpotDataUpdateCoordinator
     _source: SourceShell
     _attr_has_entity_name = True
+    _unrecorded_attributes = frozenset({ATTR_DATA})
 
     def __init__(
         self, coordinator: EpexSpotDataUpdateCoordinator, description: EntityDescription

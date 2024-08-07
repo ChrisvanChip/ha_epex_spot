@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timedelta, timezone
-from time import mktime
 
 import aiohttp
 from homeassistant.util import dt
@@ -38,11 +37,11 @@ class Marketprice:
 
     @property
     def price_ct_per_kwh(self):
-        return self._price_eur_per_mwh / 10
+        return round(self._price_eur_per_mwh / 10, 3)
 
 
 def toEpochMilliSec(dt: datetime) -> int:
-    return mktime(dt.timetuple()) * 1000
+    return int(dt.timestamp() * 1000)
 
 
 class Awattar:
@@ -81,8 +80,10 @@ class Awattar:
         self._marketdata = self._extract_marketdata(data["data"])
 
     async def _fetch_data(self, url):
-        start = dt.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        end = start + timedelta(days=2)
+        start = dt.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+            days=1
+        )
+        end = start + timedelta(days=3)
         async with self._session.get(
             url, params={"start": toEpochMilliSec(start), "end": toEpochMilliSec(end)}
         ) as resp:

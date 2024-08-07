@@ -54,7 +54,7 @@ class Marketprice:
 
     @property
     def price_ct_per_kwh(self):
-        return self._price_eur_per_mwh / 10
+        return round(self._price_eur_per_mwh / 10, 3)
 
 
 class SMARD:
@@ -114,9 +114,18 @@ class SMARD:
                 if entry[1] is not None:
                     entries.append(Marketprice(entry))
 
-        self._marketdata = entries[
-            -72:
-        ]  # limit number of entries to protect HA recorder
+        if entries[-1].start_time.date() == datetime.today().date():
+            # latest data is on the same day, only return 48 entries
+            # thats yesterday and today
+            self._marketdata = entries[
+                -48:
+            ]  # limit number of entries to protect HA recorder           
+        else:
+            # latest data is tomorrow, return 72 entries
+            # thats yesterday, today and tomorrow
+            self._marketdata = entries[
+                -72:
+            ]  # limit number of entries to protect HA recorder
 
     async def _fetch_data(
         self, latest_timestamp, smard_filter, smard_region, smard_resolution
